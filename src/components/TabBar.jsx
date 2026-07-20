@@ -3,6 +3,7 @@ const TABS = [
   { id: 'sources', label: 'Sources' },
   { id: 'audio', label: 'Áudio' },
   { id: 'stream', label: 'Stream' },
+  { id: 'ptz', label: 'Câmera' },
   { id: 'buttons', label: 'Botões' },
   { id: 'settings', label: 'Config' }
 ]

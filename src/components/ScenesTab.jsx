@@ -13,7 +13,7 @@ function saveFavs(list) {
   localStorage.setItem(FAV_KEY, JSON.stringify(list))
 }
 
-export default function ScenesTab({ scenes, currentScene, onChanged, viewOnly, studioMode, previewScene, onPreviewChanged }) {
+export default function ScenesTab({ scenes, currentScene, onChanged, viewOnly, studioMode, previewScene, onPreviewChanged, lastRename, pushToast }) {
   const [favorites, setFavorites] = useState(loadFavs())
   const [thumbs, setThumbs] = useState({})
   const [transitions, setTransitions] = useState({ transitions: [], currentSceneTransitionName: '' })
@@ -56,6 +56,18 @@ export default function ScenesTab({ scenes, currentScene, onChanged, viewOnly, s
       .catch(() => {})
   }, [])
 
+  // Mantém o favorito apontando pro nome novo quando uma cena é renomeada
+  // (favoritos são salvos por nome no localStorage, então sem isso a estrela some sozinha).
+  useEffect(() => {
+    if (!lastRename) return
+    setFavorites((prev) => {
+      if (!prev.includes(lastRename.oldSceneName)) return prev
+      const next = prev.map((f) => (f === lastRename.oldSceneName ? lastRename.sceneName : f))
+      saveFavs(next)
+      return next
+    })
+  }, [lastRename])
+
   async function selectScene(name) {
     if (viewOnly) return
     if (studioMode) {
@@ -94,23 +106,38 @@ export default function ScenesTab({ scenes, currentScene, onChanged, viewOnly, s
   async function createScene(e) {
     e.preventDefault()
     if (viewOnly || !newSceneName.trim()) return
-    await obsClient.createScene(newSceneName.trim())
-    setNewSceneName('')
+    try {
+      await obsClient.createScene(newSceneName.trim())
+      pushToast?.(`Cena "${newSceneName.trim()}" criada`, 'success')
+      setNewSceneName('')
+    } catch (err) {
+      pushToast?.(err?.message || 'Não foi possível criar a cena', 'error')
+    }
   }
 
   async function renameScene(e) {
     e.preventDefault()
     if (viewOnly || !manageTarget || !renameValue.trim()) return
-    await obsClient.renameScene(manageTarget, renameValue.trim())
-    setManageTarget(renameValue.trim())
-    setRenameValue('')
+    try {
+      await obsClient.renameScene(manageTarget, renameValue.trim())
+      pushToast?.(`Cena renomeada para "${renameValue.trim()}"`, 'success')
+      setManageTarget(renameValue.trim())
+      setRenameValue('')
+    } catch (err) {
+      pushToast?.(err?.message || 'Não foi possível renomear a cena', 'error')
+    }
   }
 
   async function deleteScene() {
     if (viewOnly || !manageTarget) return
     if (!window.confirm(`Excluir a cena "${manageTarget}"? Essa ação não pode ser desfeita.`)) return
-    await obsClient.removeScene(manageTarget)
-    setManageTarget('')
+    try {
+      await obsClient.removeScene(manageTarget)
+      pushToast?.(`Cena "${manageTarget}" excluída`, 'success')
+      setManageTarget('')
+    } catch (err) {
+      pushToast?.(err?.message || 'Não foi possível excluir a cena', 'error')
+    }
   }
 
   if (!scenes.length) {

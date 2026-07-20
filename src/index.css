@@ -601,6 +601,31 @@ input[type='range']::-webkit-slider-thumb {
   color: var(--accent-select);
 }
 
+/* ---- PTZ D-pad ---- */
+.ptz-dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  max-width: 260px;
+  margin: 0 auto 4px;
+}
+.ptz-btn {
+  aspect-ratio: 1;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.ptz-center {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
 /* ---- VU meter ---- */
 .vu-track {
   width: 100%;

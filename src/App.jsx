@@ -10,6 +10,7 @@ import AudioTab from './components/AudioTab'
 import StreamTab from './components/StreamTab'
 import ButtonsTab from './components/ButtonsTab'
 import SettingsTab from './components/SettingsTab'
+import PtzTab from './components/PtzTab'
 import LivePreview from './components/LivePreview'
 import ToastStack, { useToasts } from './components/Toast'
 
@@ -32,6 +33,7 @@ export default function App() {
   const [studioMode, setStudioMode] = useState(false)
   const [viewOnly, setViewOnly] = useState(localStorage.getItem(VIEW_ONLY_KEY) === '1')
   const [showPreview, setShowPreview] = useState(false)
+  const [lastRename, setLastRename] = useState(null)
 
   const lastConn = useRef(null)
   const reconnectTimer = useRef(null)
@@ -74,6 +76,7 @@ export default function App() {
       setScenes((prev) => prev.map((s) => (s.sceneName === oldSceneName ? { ...s, sceneName } : s)))
       setCurrentScene((prev) => (prev === oldSceneName ? sceneName : prev))
       setPreviewScene((prev) => (prev === oldSceneName ? sceneName : prev))
+      setLastRename({ oldSceneName, sceneName })
     })
     obsClient.on('StudioModeStateChanged', (d) => setStudioMode(d.studioModeEnabled))
     obsClient.on('StreamStateChanged', (d) => setStreaming(d.outputActive))
@@ -179,11 +182,14 @@ export default function App() {
             studioMode={studioMode}
             previewScene={previewScene}
             onPreviewChanged={setPreviewScene}
+            lastRename={lastRename}
+            pushToast={push}
           />
         )}
-        {tab === 'sources' && <SourcesTab currentScene={currentScene} viewOnly={viewOnly} />}
+        {tab === 'sources' && <SourcesTab currentScene={currentScene} viewOnly={viewOnly} pushToast={push} />}
         {tab === 'audio' && <AudioTab viewOnly={viewOnly} />}
         {tab === 'stream' && <StreamTab viewOnly={viewOnly} pushToast={push} />}
+        {tab === 'ptz' && <PtzTab viewOnly={viewOnly} pushToast={push} />}
         {tab === 'buttons' && <ButtonsTab scenes={scenes} inputs={inputs} viewOnly={viewOnly} />}
         {tab === 'settings' && (
           <SettingsTab

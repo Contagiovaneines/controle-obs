@@ -19,12 +19,13 @@ const KIND_LABELS = {
   wasapi_output_capture: 'Áudio do desktop'
 }
 
-export default function SourcesTab({ currentScene, viewOnly }) {
+export default function SourcesTab({ currentScene, viewOnly, pushToast }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState(null)
   const [transform, setTransform] = useState(null)
   const [filters, setFilters] = useState([])
+  const [canvas, setCanvas] = useState(null)
 
   const [kinds, setKinds] = useState([])
   const [adding, setAdding] = useState(false)
@@ -50,15 +51,23 @@ export default function SourcesTab({ currentScene, viewOnly }) {
 
   useEffect(() => {
     obsClient.getInputKinds().then(setKinds).catch(() => setKinds([]))
+    obsClient.getVideoSettings().then(setCanvas).catch(() => setCanvas(null))
   }, [])
 
   async function toggle(item) {
     if (viewOnly) return
     const next = !item.sceneItemEnabled
-    await obsClient.setSceneItemEnabled(currentScene, item.sceneItemId, next)
     setItems((prev) =>
       prev.map((i) => (i.sceneItemId === item.sceneItemId ? { ...i, sceneItemEnabled: next } : i))
     )
+    try {
+      await obsClient.setSceneItemEnabled(currentScene, item.sceneItemId, next)
+    } catch (err) {
+      setItems((prev) =>
+        prev.map((i) => (i.sceneItemId === item.sceneItemId ? { ...i, sceneItemEnabled: !next } : i))
+      )
+      pushToast?.(err?.message || 'Não foi possível alterar a visibilidade', 'error')
+    }
   }
 
   async function toggleExpand(item) {
@@ -69,12 +78,17 @@ export default function SourcesTab({ currentScene, viewOnly }) {
       return
     }
     setExpanded(item.sceneItemId)
-    const [t, f] = await Promise.all([
-      obsClient.getSceneItemTransform(currentScene, item.sceneItemId),
-      obsClient.getSourceFilters(item.sourceName).catch(() => [])
-    ])
-    setTransform(t)
-    setFilters(f)
+    try {
+      const [t, f] = await Promise.all([
+        obsClient.getSceneItemTransform(currentScene, item.sceneItemId),
+        obsClient.getSourceFilters(item.sourceName).catch(() => [])
+      ])
+      setTransform(t)
+      setFilters(f)
+    } catch (err) {
+      pushToast?.(err?.message || 'Não foi possível carregar a fonte', 'error')
+      setExpanded(null)
+    }
   }
 
   function updateField(field, value) {
@@ -83,14 +97,23 @@ export default function SourcesTab({ currentScene, viewOnly }) {
 
   async function commitField(sceneItemId, field, value) {
     if (viewOnly) return
-    await obsClient.setSceneItemTransform(currentScene, sceneItemId, { [field]: value })
+    try {
+      await obsClient.setSceneItemTransform(currentScene, sceneItemId, { [field]: value })
+    } catch (err) {
+      pushToast?.(err?.message || 'Não foi possível ajustar o transform', 'error')
+    }
   }
 
   async function toggleFilter(sourceName, filterName, enabled) {
     if (viewOnly) return
     const next = !enabled
-    await obsClient.setFilterEnabled(sourceName, filterName, next)
     setFilters((prev) => prev.map((f) => (f.filterName === filterName ? { ...f, filterEnabled: next } : f)))
+    try {
+      await obsClient.setFilterEnabled(sourceName, filterName, next)
+    } catch (err) {
+      setFilters((prev) => prev.map((f) => (f.filterName === filterName ? { ...f, filterEnabled: enabled } : f)))
+      pushToast?.(err?.message || 'Não foi possível alterar o filtro', 'error')
+    }
   }
 
   async function handleAddSource(e) {
@@ -99,10 +122,28 @@ export default function SourcesTab({ currentScene, viewOnly }) {
     let settings = {}
     if (form.kind.startsWith('text')) settings = { text: form.text }
     else if (form.kind === 'browser_source') settings = { url: form.url || 'https://', width: 1280, height: 720 }
-    await obsClient.createInput(currentScene, form.name.trim(), form.kind, settings)
-    setForm({ name: '', kind: '', text: '', url: '' })
-    setAdding(false)
-    load()
+    try {
+      await obsClient.createInput(currentScene, form.name.trim(), form.kind, settings)
+      pushToast?.(`Fonte "${form.name.trim()}" criada`, 'success')
+      setForm({ name: '', kind: '', text: '', url: '' })
+      setAdding(false)
+      load()
+    } catch (err) {
+      pushToast?.(err?.message || 'Não foi possível criar a fonte', 'error')
+    }
+  }
+
+  async function handleRemoveSource(item) {
+    if (viewOnly) return
+    if (!window.confirm(`Excluir a fonte "${item.sourceName}"? Ela some de todas as cenas que a usam.`)) return
+    try {
+      await obsClient.removeInput(item.sourceName)
+      pushToast?.(`Fonte "${item.sourceName}" excluída`, 'success')
+      if (expanded === item.sceneItemId) setExpanded(null)
+      load()
+    } catch (err) {
+      pushToast?.(err?.message || 'Não foi possível excluir a fonte', 'error')
+    }
   }
 
   const kindOptions = kinds.map((k) => ({ kind: k, label: KIND_LABELS[k] || k }))
@@ -182,6 +223,11 @@ export default function SourcesTab({ currentScene, viewOnly }) {
             >
               {item.sceneItemEnabled ? '👁' : '—'}
             </button>
+            {!viewOnly && (
+              <button className="icon-btn muted" onClick={() => handleRemoveSource(item)}>
+                ✕
+              </button>
+            )}
           </div>
 
           {expanded === item.sceneItemId && (
@@ -192,6 +238,11 @@ export default function SourcesTab({ currentScene, viewOnly }) {
                 </div>
               ) : (
                 <>
+                  {canvas && (
+                    <div className="db-readout" style={{ textAlign: 'left', marginBottom: 8 }}>
+                      Canvas: {canvas.baseWidth}×{canvas.baseHeight}
+                    </div>
+                  )}
                   <TransformFields
                     transform={transform}
                     viewOnly={viewOnly}
