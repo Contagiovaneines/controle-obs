@@ -60,10 +60,34 @@ deste projeto.
 
 ## Funcionalidades
 
-- **Cenas** — grade com todas as cenas, troca com 1 toque, indica a ativa
+- **Cenas** — grade com miniatura (preview) de cada cena, atualizada automaticamente;
+  favoritos (estrela) ficam sempre no topo; troca de transição e duração
+- **Studio Mode** — quando ativado nas Configurações, tocar numa cena define o
+  *preview* em vez de trocar direto; botão dedicado dispara a transição
+  preview → program
 - **Sources** — liga/desliga a visibilidade de cada fonte da cena atual
-- **Áudio** — mute e volume (dB) de cada entrada de áudio
-- **Stream** — inicia/para transmissão, com cronômetro
-- **Gravação** — inicia/para/pausa gravação, com cronômetro
+- **Áudio** — mute, volume (dB) e **VU meter em tempo real** de cada entrada
+- **Stream** — inicia/para transmissão, cronômetro, **bitrate atual** e
+  **% de frames perdidos** (fica vermelho se passar de 2%)
+- **Gravação** — inicia/para/pausa, com cronômetro
+- **Replay Buffer** — ativa o buffer e salva o replay com 1 toque
 - **Botões** — crie atalhos customizados (trocar cena, disparar hotkey do
   OBS, ou mutar uma fonte específica), salvos no navegador
+- **Configurações**:
+  - Studio Mode on/off
+  - Trocar **perfil** e **coleção de cenas** do OBS
+  - **Modo visualização** — trava todas as ações, só mostra status (bom pra
+    dar acesso a alguém acompanhar sem poder mexer)
+  - **PIN de acesso ao app** — trava a tela inicial até digitar o PIN
+  - Stats de performance do OBS (CPU, FPS, frames perdidos, memória)
+- **Múltiplas conexões** — salve vários PCs/OBS e escolha qual conectar
+- **Reconexão automática** — se a conexão cair, o app tenta reconectar
+  sozinho (com aviso na tela) até voltar
+
+## Dica: atalho na tela de bloqueio do iPhone (Shortcuts)
+
+O app em si não expõe uma API HTTP própria, mas como ele fala diretamente
+com o WebSocket do OBS, dá pra criar um Atalho da Apple que abre a URL do
+app direto numa cena específica no futuro, se você quiser evoluir isso —
+por ora, o caminho mais simples é fixar o site na Tela de Início (Safari →
+Compartilhar → Adicionar à Tela de Início) pra abrir com 1 toque.

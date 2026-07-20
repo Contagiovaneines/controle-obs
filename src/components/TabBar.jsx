@@ -3,7 +3,8 @@ const TABS = [
   { id: 'sources', label: 'Sources' },
   { id: 'audio', label: 'Áudio' },
   { id: 'stream', label: 'Stream' },
-  { id: 'buttons', label: 'Botões' }
+  { id: 'buttons', label: 'Botões' },
+  { id: 'settings', label: 'Config' }
 ]
 
 export default function TabBar({ active, onChange }) {

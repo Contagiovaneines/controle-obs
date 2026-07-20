@@ -14,7 +14,7 @@ function saveButtons(list) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
 }
 
-export default function ButtonsTab({ scenes, inputs }) {
+export default function ButtonsTab({ scenes, inputs, viewOnly }) {
   const [buttons, setButtons] = useState(loadButtons())
   const [adding, setAdding] = useState(false)
   const [hotkeys, setHotkeys] = useState([])
@@ -41,6 +41,7 @@ export default function ButtonsTab({ scenes, inputs }) {
   }
 
   async function run(btn) {
+    if (viewOnly) return
     if (btn.type === 'scene') await obsClient.setScene(btn.target)
     if (btn.type === 'hotkey') await obsClient.triggerHotkey(btn.target)
     if (btn.type === 'mute') {

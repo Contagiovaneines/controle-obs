@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { obsClient } from '../obsClient'
 
-export default function SourcesTab({ currentScene }) {
+export default function SourcesTab({ currentScene, viewOnly }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -21,6 +21,7 @@ export default function SourcesTab({ currentScene }) {
   }, [load])
 
   async function toggle(item) {
+    if (viewOnly) return
     const next = !item.sceneItemEnabled
     await obsClient.setSceneItemEnabled(currentScene, item.sceneItemId, next)
     setItems((prev) =>

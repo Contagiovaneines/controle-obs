@@ -1,9 +1,11 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { obsClient } from '../obsClient'
 
-export default function AudioTab() {
+export default function AudioTab({ viewOnly }) {
   const [inputs, setInputs] = useState([])
   const [loading, setLoading] = useState(true)
+  const [levels, setLevels] = useState({})
+  const inputNames = useRef(new Set())
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -23,6 +25,7 @@ export default function AudioTab() {
         })
       )
       setInputs(withState)
+      inputNames.current = new Set(withState.map((i) => i.name))
     } finally {
       setLoading(false)
     }
@@ -32,17 +35,38 @@ export default function AudioTab() {
     load()
   }, [load])
 
+  // VU meter em tempo real via evento de alto volume do obs-websocket
+  useEffect(() => {
+    function onMeters(data) {
+      setLevels((prev) => {
+        const next = { ...prev }
+        for (const item of data.inputs) {
+          if (!inputNames.current.has(item.inputName)) continue
+          const channel = item.inputLevelsMul?.[0]
+          const peak = channel ? channel[0] : 0
+          next[item.inputName] = Math.min(1, peak)
+        }
+        return next
+      })
+    }
+    obsClient.on('InputVolumeMeters', onMeters)
+    return () => obsClient.off('InputVolumeMeters', onMeters)
+  }, [])
+
   async function toggleMute(input) {
+    if (viewOnly) return
     const next = !input.muted
     await obsClient.setInputMute(input.name, next)
     setInputs((prev) => prev.map((i) => (i.name === input.name ? { ...i, muted: next } : i)))
   }
 
   async function changeVolume(input, db) {
+    if (viewOnly) return
     setInputs((prev) => prev.map((i) => (i.name === input.name ? { ...i, db } : i)))
   }
 
   async function commitVolume(input, db) {
+    if (viewOnly) return
     await obsClient.setInputVolume(input.name, db)
   }
 
@@ -62,6 +86,12 @@ export default function AudioTab() {
             >
               {input.muted ? '🔇' : '🔊'}
             </button>
+          </div>
+          <div className="vu-track">
+            <div
+              className={`vu-fill ${levels[input.name] > 0.85 ? 'vu-hot' : ''}`}
+              style={{ width: `${Math.round((levels[input.name] || 0) * 100)}%` }}
+            />
           </div>
           <input
             type="range"
