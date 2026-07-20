@@ -1,6 +1,17 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { obsClient } from '../obsClient'
 
+const MONITOR_CYCLE = [
+  'OBS_MONITORING_TYPE_NONE',
+  'OBS_MONITORING_TYPE_MONITOR_ONLY',
+  'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT'
+]
+const MONITOR_LABEL = {
+  OBS_MONITORING_TYPE_NONE: 'Monitor: off',
+  OBS_MONITORING_TYPE_MONITOR_ONLY: 'Monitor: só ouvir',
+  OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT: 'Monitor: ouvir + stream'
+}
+
 export default function AudioTab({ viewOnly }) {
   const [inputs, setInputs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -13,14 +24,16 @@ export default function AudioTab({ viewOnly }) {
       const audioInputs = await obsClient.getInputs()
       const withState = await Promise.all(
         audioInputs.map(async (input) => {
-          const [mute, vol] = await Promise.all([
+          const [mute, vol, monitorType] = await Promise.all([
             obsClient.getInputMute(input.inputName),
-            obsClient.getInputVolume(input.inputName)
+            obsClient.getInputVolume(input.inputName),
+            obsClient.getInputAudioMonitorType(input.inputName).catch(() => 'OBS_MONITORING_TYPE_NONE')
           ])
           return {
             name: input.inputName,
             muted: mute.inputMuted,
-            db: Math.round(vol.inputVolumeDb)
+            db: Math.round(vol.inputVolumeDb),
+            monitorType
           }
         })
       )
@@ -70,6 +83,14 @@ export default function AudioTab({ viewOnly }) {
     await obsClient.setInputVolume(input.name, db)
   }
 
+  async function cycleMonitor(input) {
+    if (viewOnly) return
+    const idx = MONITOR_CYCLE.indexOf(input.monitorType)
+    const next = MONITOR_CYCLE[(idx + 1) % MONITOR_CYCLE.length]
+    await obsClient.setInputAudioMonitorType(input.name, next)
+    setInputs((prev) => prev.map((i) => (i.name === input.name ? { ...i, monitorType: next } : i)))
+  }
+
   if (loading) return <div className="empty-state">Carregando fontes de áudio...</div>
   if (!inputs.length) return <div className="empty-state">Nenhuma fonte de áudio encontrada.</div>
 
@@ -103,6 +124,9 @@ export default function AudioTab({ viewOnly }) {
             onTouchEnd={(e) => commitVolume(input, Number(e.target.value))}
           />
           <div className="db-readout">{input.db} dB</div>
+          <button className="pill-btn monitor-btn" onClick={() => cycleMonitor(input)}>
+            {MONITOR_LABEL[input.monitorType] || 'Monitor: off'}
+          </button>
         </div>
       ))}
     </div>

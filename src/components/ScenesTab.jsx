@@ -19,6 +19,10 @@ export default function ScenesTab({ scenes, currentScene, onChanged, viewOnly, s
   const [transitions, setTransitions] = useState({ transitions: [], currentSceneTransitionName: '' })
   const [duration, setDuration] = useState(300)
   const thumbTimer = useRef(null)
+  const [managing, setManaging] = useState(false)
+  const [newSceneName, setNewSceneName] = useState('')
+  const [manageTarget, setManageTarget] = useState('')
+  const [renameValue, setRenameValue] = useState('')
 
   const loadThumb = useCallback(async (name) => {
     try {
@@ -85,6 +89,28 @@ export default function ScenesTab({ scenes, currentScene, onChanged, viewOnly, s
   async function changeDuration(ms) {
     setDuration(ms)
     await obsClient.setTransitionDuration(ms)
+  }
+
+  async function createScene(e) {
+    e.preventDefault()
+    if (viewOnly || !newSceneName.trim()) return
+    await obsClient.createScene(newSceneName.trim())
+    setNewSceneName('')
+  }
+
+  async function renameScene(e) {
+    e.preventDefault()
+    if (viewOnly || !manageTarget || !renameValue.trim()) return
+    await obsClient.renameScene(manageTarget, renameValue.trim())
+    setManageTarget(renameValue.trim())
+    setRenameValue('')
+  }
+
+  async function deleteScene() {
+    if (viewOnly || !manageTarget) return
+    if (!window.confirm(`Excluir a cena "${manageTarget}"? Essa ação não pode ser desfeita.`)) return
+    await obsClient.removeScene(manageTarget)
+    setManageTarget('')
   }
 
   if (!scenes.length) {
@@ -170,6 +196,71 @@ export default function ScenesTab({ scenes, currentScene, onChanged, viewOnly, s
           )
         })}
       </div>
+
+      {!viewOnly && (
+        <>
+          <div className="section-label" style={{ marginTop: 18 }}>
+            Gerenciar cenas
+          </div>
+          {managing ? (
+            <div className="add-btn-form">
+              <form className="add-btn-form" style={{ padding: 0, border: 'none', marginBottom: 0 }} onSubmit={createScene}>
+                <input
+                  placeholder="Nome da nova cena"
+                  value={newSceneName}
+                  onChange={(e) => setNewSceneName(e.target.value)}
+                />
+                <button className="primary-btn" type="submit">
+                  + Criar cena
+                </button>
+              </form>
+
+              <select
+                className="settings-select"
+                value={manageTarget}
+                onChange={(e) => {
+                  setManageTarget(e.target.value)
+                  setRenameValue(e.target.value)
+                }}
+              >
+                <option value="">Selecione uma cena...</option>
+                {scenes.map((s) => (
+                  <option key={s.sceneName} value={s.sceneName}>
+                    {s.sceneName}
+                  </option>
+                ))}
+              </select>
+
+              {manageTarget && (
+                <>
+                  <form className="action-row" onSubmit={renameScene}>
+                    <input
+                      placeholder="Novo nome"
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      style={{ flex: 1 }}
+                    />
+                    <button className="pill-btn" type="submit">
+                      Renomear
+                    </button>
+                  </form>
+                  <button className="pill-btn active-pill" onClick={deleteScene}>
+                    Excluir "{manageTarget}"
+                  </button>
+                </>
+              )}
+
+              <button className="pill-btn" onClick={() => setManaging(false)}>
+                Fechar
+              </button>
+            </div>
+          ) : (
+            <button className="pill-btn" style={{ width: '100%' }} onClick={() => setManaging(true)}>
+              + Nova cena / renomear / excluir
+            </button>
+          )}
+        </>
+      )}
     </div>
   )
 }

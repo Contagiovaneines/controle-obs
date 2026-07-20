@@ -10,6 +10,7 @@ import AudioTab from './components/AudioTab'
 import StreamTab from './components/StreamTab'
 import ButtonsTab from './components/ButtonsTab'
 import SettingsTab from './components/SettingsTab'
+import LivePreview from './components/LivePreview'
 import ToastStack, { useToasts } from './components/Toast'
 
 const VIEW_ONLY_KEY = 'obs_view_only'
@@ -30,6 +31,7 @@ export default function App() {
   const [recording, setRecording] = useState(false)
   const [studioMode, setStudioMode] = useState(false)
   const [viewOnly, setViewOnly] = useState(localStorage.getItem(VIEW_ONLY_KEY) === '1')
+  const [showPreview, setShowPreview] = useState(false)
 
   const lastConn = useRef(null)
   const reconnectTimer = useRef(null)
@@ -67,6 +69,12 @@ export default function App() {
   function wireEvents() {
     obsClient.on('CurrentProgramSceneChanged', (d) => setCurrentScene(d.sceneName))
     obsClient.on('CurrentPreviewSceneChanged', (d) => setPreviewScene(d.sceneName))
+    obsClient.on('SceneListChanged', (d) => setScenes(d.scenes))
+    obsClient.on('SceneNameChanged', ({ oldSceneName, sceneName }) => {
+      setScenes((prev) => prev.map((s) => (s.sceneName === oldSceneName ? { ...s, sceneName } : s)))
+      setCurrentScene((prev) => (prev === oldSceneName ? sceneName : prev))
+      setPreviewScene((prev) => (prev === oldSceneName ? sceneName : prev))
+    })
     obsClient.on('StudioModeStateChanged', (d) => setStudioMode(d.studioModeEnabled))
     obsClient.on('StreamStateChanged', (d) => setStreaming(d.outputActive))
     obsClient.on('RecordStateChanged', (d) => setRecording(d.outputActive))
@@ -150,8 +158,17 @@ export default function App() {
         streaming={streaming}
         recording={recording}
         onDisconnect={handleDisconnect}
+        onOpenPreview={() => setShowPreview(true)}
       />
       {viewOnly && <div className="view-only-banner">MODO VISUALIZAÇÃO — ações bloqueadas</div>}
+      {showPreview && (
+        <LivePreview
+          currentScene={currentScene}
+          studioMode={studioMode}
+          previewScene={previewScene}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
       <div className="content">
         {tab === 'scenes' && (
           <ScenesTab

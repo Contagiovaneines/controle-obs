@@ -41,6 +41,15 @@ class ObsClient {
   async setScene(sceneName) {
     return this.obs.call('SetCurrentProgramScene', { sceneName })
   }
+  async createScene(sceneName) {
+    return this.obs.call('CreateScene', { sceneName })
+  }
+  async removeScene(sceneName) {
+    return this.obs.call('RemoveScene', { sceneName })
+  }
+  async renameScene(sceneName, newSceneName) {
+    return this.obs.call('SetSceneName', { sceneName, newSceneName })
+  }
   async setPreviewScene(sceneName) {
     return this.obs.call('SetCurrentPreviewScene', { sceneName })
   }
@@ -64,6 +73,48 @@ class ObsClient {
       sceneItemId,
       sceneItemEnabled: enabled
     })
+  }
+  async getSceneItemTransform(sceneName, sceneItemId) {
+    const { sceneItemTransform } = await this.obs.call('GetSceneItemTransform', {
+      sceneName,
+      sceneItemId
+    })
+    return sceneItemTransform
+  }
+  async setSceneItemTransform(sceneName, sceneItemId, transform) {
+    return this.obs.call('SetSceneItemTransform', {
+      sceneName,
+      sceneItemId,
+      sceneItemTransform: transform
+    })
+  }
+  async getVideoSettings() {
+    return this.obs.call('GetVideoSettings')
+  }
+  async getInputKinds() {
+    const { inputKinds } = await this.obs.call('GetInputKindList')
+    return inputKinds
+  }
+  async createInput(sceneName, inputName, inputKind, inputSettings = {}) {
+    return this.obs.call('CreateInput', {
+      sceneName,
+      inputName,
+      inputKind,
+      inputSettings,
+      sceneItemEnabled: true
+    })
+  }
+  async removeInput(inputName) {
+    return this.obs.call('RemoveInput', { inputName })
+  }
+
+  // ---- Filtros ----
+  async getSourceFilters(sourceName) {
+    const { filters } = await this.obs.call('GetSourceFilterList', { sourceName })
+    return filters
+  }
+  async setFilterEnabled(sourceName, filterName, filterEnabled) {
+    return this.obs.call('SetSourceFilterEnabled', { sourceName, filterName, filterEnabled })
   }
 
   // ---- Áudio ----
@@ -92,6 +143,13 @@ class ObsClient {
   }
   async setInputVolume(inputName, volumeDb) {
     return this.obs.call('SetInputVolume', { inputName, inputVolumeDb: volumeDb })
+  }
+  async getInputAudioMonitorType(inputName) {
+    const { monitorType } = await this.obs.call('GetInputAudioMonitorType', { inputName })
+    return monitorType
+  }
+  async setInputAudioMonitorType(inputName, monitorType) {
+    return this.obs.call('SetInputAudioMonitorType', { inputName, monitorType })
   }
 
   // ---- Stream / Gravação ----
